@@ -87,6 +87,8 @@ export default function ActivityClockScreen() {
   const [focus, setFocus] = useState<string>("");
 
   const [lastLogged, setLastLogged] = useState<LoggedSegments>(null);
+  const [isLogging, setIsLogging] = useState<boolean>(false);
+  const [isUndoing, setIsUndoing] = useState<boolean>(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -318,6 +320,7 @@ export default function ActivityClockScreen() {
   }
 
   async function logSinceLastStop(activityName?: string, explicitMinutes?: number) {
+    if (isLogging || isUndoing) return;
     const clean = (activityName ?? nameInput).trim();
     if (!clean) return;
 
@@ -342,6 +345,8 @@ export default function ActivityClockScreen() {
 
     if (sessionEnd <= sessionStart) return;
 
+    setIsLogging(true);
+
     const segments = splitByLocalMidnight(sessionStart, sessionEnd);
 
     const segmentsForUndo = segments.map((seg) => ({
@@ -350,44 +355,50 @@ export default function ActivityClockScreen() {
       activity: clean,
     }));
 
-    let latestTodayDoc: DayLog | null = null;
+    try {
+      let latestTodayDoc: DayLog | null = null;
 
-    for (const seg of segments) {
-      const dateStr = yyyyMmDdLocal(seg.start);
-      const updated = await appendActivitySession(dateStr, {
-        start: seg.start,
-        end: seg.end,
-        activity: clean,
-      });
-      setHistory((prev) => upsertTodayInHistory(prev, updated));
-      if (dateStr === yyyyMmDdLocal()) {
-        latestTodayDoc = updated;
+      for (const seg of segments) {
+        const dateStr = yyyyMmDdLocal(seg.start);
+        const updated = await appendActivitySession(dateStr, {
+          start: seg.start,
+          end: seg.end,
+          activity: clean,
+        });
+        setHistory((prev) => upsertTodayInHistory(prev, updated));
+        if (dateStr === yyyyMmDdLocal()) {
+          latestTodayDoc = updated;
+        }
       }
+
+      if (latestTodayDoc) setTodayLog(latestTodayDoc);
+
+      await ensureNamePersisted(clean);
+
+      const newStart = sessionEnd;
+      setStart(newStart);
+      await setLastStop(newStart.toISOString());
+
+      setLastLogged({
+        prevStart: prevStart.toISOString(),
+        segments: segmentsForUndo,
+      });
+
+      setNameInput("");
+      setMinutesInput("");
+    } finally {
+      setIsLogging(false);
     }
-
-    if (latestTodayDoc) setTodayLog(latestTodayDoc);
-
-    await ensureNamePersisted(clean);
-
-    const newStart = sessionEnd;
-    setStart(newStart);
-    await setLastStop(newStart.toISOString());
-
-    setLastLogged({
-      prevStart: prevStart.toISOString(),
-      segments: segmentsForUndo,
-    });
-
-    setNameInput("");
-    setMinutesInput("");
   }
 
   async function undoLast() {
+    if (isLogging || isUndoing) return;
     if (!lastLogged || !lastLogged.segments?.length) return;
 
     const { prevStart, segments } = lastLogged;
 
     try {
+      setIsUndoing(true);
       for (const seg of segments) {
         const dateStr = yyyyMmDdLocal(new Date(seg.start));
         await deleteActivitySession(dateStr, seg);
@@ -424,6 +435,8 @@ export default function ActivityClockScreen() {
       setLastLogged(null);
     } catch (e) {
       console.error("Undo failed", e);
+    } finally {
+      setIsUndoing(false);
     }
   }
 
@@ -518,6 +531,7 @@ export default function ActivityClockScreen() {
         nameInput={nameInput}
         minutesInput={minutesInput}
         names={names}
+        isBusy={isLogging || isUndoing}
         onNameChange={setNameInput}
         onMinutesChange={setMinutesInput}
         onLog={logSinceLastStop}

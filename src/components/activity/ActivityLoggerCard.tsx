@@ -11,6 +11,7 @@ type ActivityLoggerCardProps = {
   nameInput: string;
   minutesInput: string;
   names: string[];
+  isBusy?: boolean;
   onNameChange: (value: string) => void;
   onMinutesChange: (value: string) => void;
   onLog: (activityName?: string, explicitMinutes?: number) => void;
@@ -25,6 +26,7 @@ export default function ActivityLoggerCard({
   nameInput,
   minutesInput,
   names,
+  isBusy = false,
   onNameChange,
   onMinutesChange,
   onLog,
@@ -65,13 +67,20 @@ export default function ActivityLoggerCard({
         </View>
 
         <View style={styles.row}>
-          <Pressable style={styles.primaryButton} onPress={() => onLog(undefined, parsedMinutes)}>
+          <Pressable
+            style={[styles.primaryButton, isBusy && styles.disabledButton]}
+            onPress={() => onLog(undefined, parsedMinutes)}
+            disabled={isBusy}
+          >
             <Text style={styles.primaryText}>Log segment</Text>
           </Pressable>
           <Pressable
-            style={[styles.secondaryButton, !canUndo && styles.disabledButton]}
+            style={[
+              styles.secondaryButton,
+              (!canUndo || isBusy) && styles.disabledButton,
+            ]}
             onPress={onUndo}
-            disabled={!canUndo}
+            disabled={!canUndo || isBusy}
           >
             <Text style={styles.secondaryText}>Undo last</Text>
           </Pressable>
@@ -90,6 +99,7 @@ export default function ActivityLoggerCard({
                   key={n}
                   style={styles.chipButton}
                   onPress={() => onLog(n, parsedMinutes)}
+                  disabled={isBusy}
                 >
                   <Text style={styles.chipText}>{n}</Text>
                 </Pressable>

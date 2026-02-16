@@ -20,6 +20,9 @@
         "backgroundColor": "#f6f2ea"
       },
       "package": "com.anonymous.activityclockmobile"
+    },
+    "extra": {
+      "apiBase": "https://sivkri78.netlify.app"
     }
   }
 }
