@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Activity Clock",
+    "slug": "activity-clock-mobile",
+    "version": "0.1.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "icon": "./assets/icon.png",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.activityclockmobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#f6f2ea"
+      },
+      "package": "com.anonymous.activityclockmobile"
+    }
+  }
+}
